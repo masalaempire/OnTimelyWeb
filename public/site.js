@@ -1,71 +1,56 @@
 (() => {
   "use strict";
-  const tabs = Array.from(document.querySelectorAll("[data-tab]"));
-  const panels = Array.from(document.querySelectorAll(".app-panel"));
-  const feedback = document.querySelector("#demo-feedback");
-  let completed = false;
-  function selectTab(name, focus = false) {
-    tabs.forEach((tab) => {
-      const selected = tab.dataset.tab === name;
-      tab.classList.toggle("is-selected", selected);
-      tab.setAttribute("aria-selected", String(selected));
-      tab.tabIndex = selected ? 0 : -1;
-      if (selected && focus) tab.focus();
-    });
-    panels.forEach((panel) => { panel.hidden = panel.id !== "panel-" + name; });
-  }
-  tabs.forEach((tab, index) => {
-    tab.addEventListener("click", () => selectTab(tab.dataset.tab));
-    tab.addEventListener("keydown", (event) => {
-      const moves = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+  const carousel = document.querySelector("[data-carousel]");
+  if (carousel) {
+    const slides = Array.from(carousel.querySelectorAll("[data-slide]"));
+    const dots = Array.from(carousel.querySelectorAll("[data-slide-to]"));
+    const track = carousel.querySelector("[data-carousel-track]");
+    const viewport = carousel.querySelector("[data-carousel-viewport]");
+    const status = carousel.querySelector("[data-carousel-status]");
+    let current = 0;
+    function showSlide(index) {
+      current = (index + slides.length) % slides.length;
+      track.style.transform = `translateX(-${current * 100}%)`;
+      slides.forEach((slide, i) => {
+        slide.setAttribute("aria-hidden", String(i !== current));
+        slide.inert = i !== current;
+      });
+      dots.forEach((dot, i) => {
+        if (i === current) dot.setAttribute("aria-current", "true");
+        else dot.removeAttribute("aria-current");
+      });
+      status.textContent = `Screenshot ${current + 1} of ${slides.length}`;
+    }
+    carousel.querySelector("[data-carousel-previous]").addEventListener("click", () => showSlide(current - 1));
+    carousel.querySelector("[data-carousel-next]").addEventListener("click", () => showSlide(current + 1));
+    dots.forEach((dot) => dot.addEventListener("click", () => showSlide(Number(dot.dataset.slideTo))));
+    carousel.addEventListener("keydown", (event) => {
+      const moves = { ArrowLeft: -1, ArrowRight: 1 };
       if (event.key in moves) {
         event.preventDefault();
-        selectTab(tabs[(index + moves[event.key] + tabs.length) % tabs.length].dataset.tab, true);
+        showSlide(current + moves[event.key]);
       } else if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
-        selectTab(tabs[event.key === "Home" ? 0 : tabs.length - 1].dataset.tab, true);
+        showSlide(event.key === "Home" ? 0 : slides.length - 1);
       }
     });
-  });
-  document.querySelectorAll("[data-action]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (completed) return;
-      const status = document.querySelector("[data-task-status]");
-      if (button.dataset.action === "work") {
-        status.textContent = "You’re working. One step closer.";
-        feedback.textContent = "Example: start confirmed. OnTimely can check in again at your latest safe start.";
-        button.hidden = true;
-        document.querySelector('[data-action="snooze"]').hidden = true;
-      }
-      if (button.dataset.action === "snooze") {
-        status.textContent = "Snoozed for 10 minutes.";
-        feedback.textContent = "Example: a little more time. Your deadline and latest safe start stay in view.";
-      }
-      if (button.dataset.action === "done") {
-        completed = true;
-        document.querySelector("#example-task").hidden = true;
-        document.querySelector("[data-ready-group]").hidden = true;
-        document.querySelector("[data-completed-essay]").hidden = false;
-        document.querySelector("[data-active-count]").textContent = "1";
-        document.querySelector("[data-done-count]").textContent = "2";
-        feedback.textContent = "Example: task finished. Its reminders stop, and it moves to Done.";
-        selectTab("done", true);
+    let touchStart = null;
+    viewport.addEventListener("pointerdown", (event) => {
+      if (event.pointerType !== "touch") return;
+      touchStart = { x: event.clientX, y: event.clientY };
+      viewport.setPointerCapture(event.pointerId);
+    });
+    viewport.addEventListener("pointerup", (event) => {
+      if (!touchStart) return;
+      const dx = event.clientX - touchStart.x;
+      const dy = event.clientY - touchStart.y;
+      touchStart = null;
+      if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+        showSlide(current + (dx < 0 ? 1 : -1));
       }
     });
-  });
-  document.querySelector("[data-reset]").addEventListener("click", () => {
-    completed = false;
-    document.querySelector("#example-task").hidden = false;
-    document.querySelector("[data-ready-group]").hidden = false;
-    document.querySelector("[data-completed-essay]").hidden = true;
-    document.querySelector("[data-task-status]").textContent = "It’s a good time to get started.";
-    document.querySelectorAll("[data-action]").forEach((button) => { button.hidden = false; });
-    document.querySelector("[data-active-count]").textContent = "2";
-    document.querySelector("[data-done-count]").textContent = "1";
-    document.querySelector(".timing-details").open = false;
-    feedback.textContent = "Try the tabs and task actions. This is an example, so nothing is saved.";
-    selectTab("active");
-  });
+    viewport.addEventListener("pointercancel", () => { touchStart = null; });
+  }
   // The stable release download works even if this optional metadata request fails.
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6000);
