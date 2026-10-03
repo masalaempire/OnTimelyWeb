@@ -55,3 +55,11 @@ test("downloads still work when GitHub metadata is unavailable", async ({ page }
   await expect(page.locator("[data-release]").first()).toHaveText("Latest on GitHub");
   await expect(page.locator("[data-download]").first()).toHaveAttribute("href", download);
 });
+
+test("Cloudflare serves a styled custom 404 for nested paths", async ({ page }) => {
+  const response = await page.goto("/missing/page");
+  expect(response.status()).toBe(404);
+  await expect(page.getByRole("heading", { name: "This page wandered off." })).toBeVisible();
+  expect(await page.locator("img").evaluate((img) => img.complete && img.naturalWidth > 0)).toBe(true);
+  await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveAttribute("href", "/");
+});

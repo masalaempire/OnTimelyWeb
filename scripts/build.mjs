@@ -21,6 +21,6 @@ await writeFile(resolve(outDir, "assets/ontimely.png"), bytes);
 for (const page of ["index.html", "404.html"]) {
   const path = resolve(outDir, page);
   const html = await readFile(path, "utf8");
-  await writeFile(path, html.replaceAll(logoSource, "./assets/ontimely.png"));
+  await writeFile(path, html.replaceAll(logoSource, "/assets/ontimely.png"));
 }
 console.log("Built OnTimely website in dist with the app logo.");

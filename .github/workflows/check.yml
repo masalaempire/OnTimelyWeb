@@ -25,7 +25,7 @@ jobs:
         run: npx wrangler deploy --dry-run
       - name: Install browser
         run: npx playwright install --with-deps chromium
-      - name: Check desktop and mobile
+      - name: Check desktop, tablet, and mobile
         run: npm test
       - name: Save browser previews and test report
         if: always()

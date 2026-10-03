@@ -44,6 +44,6 @@ The app logo is reused from the app's `Design/OnTimely-icon-master.png`, matchin
 
 ## Checks
 
-GitHub Actions builds the site, checks the Cloudflare deployment package, and runs Chromium checks at desktop and mobile sizes. The checks cover preview actions, keyboard navigation, FAQ expansion, release API failure, image loading, download URLs, and page overflow. Screenshots and the test report are attached to each run as **website-preview**.
+GitHub Actions builds the site, checks the Cloudflare deployment package, and runs Chromium checks at desktop, tablet, and mobile sizes against Cloudflare’s local runtime on GitHub. The checks cover preview actions, keyboard navigation, FAQ expansion, release API failure, image loading, download URLs, custom 404 routing, and page overflow. Screenshots and the test report are attached to each run as **website-preview**.
 
 The source can also be viewed through a GitHub raw-file HTML preview service. The authoritative live website is the Cloudflare Worker after you connect this repository.
