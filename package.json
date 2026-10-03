@@ -1,0 +1,17 @@
+{
+  "name": "ontimely-web",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The OnTimely website, built for Cloudflare Workers.",
+  "engines": {
+    "node": ">=20.11.0"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "postinstall": "npm run build",
+    "deploy": "npm run build && npx wrangler@4 deploy",
+    "check": "node --check public/site.js && node --check scripts/build.mjs",
+    "test": "playwright test"
+  }
+}
