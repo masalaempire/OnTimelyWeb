@@ -14,6 +14,7 @@ test("download, logo, navigation, and responsive layout", async ({ page }, testI
   for (const link of await page.locator("[data-download]").all()) await expect(link).toHaveAttribute("href", download);
   await expect(page.locator("[data-release]").first()).toHaveText("Version 0.1.1");
   await page.locator(".reminders-section").scrollIntoViewIfNeeded();
+  await page.locator(".notes-section").scrollIntoViewIfNeeded();
   await page.locator(".download-section").scrollIntoViewIfNeeded();
   await expect.poll(() => page.locator("img").evaluateAll((images) => images.every((img) => img.complete && img.naturalWidth > 0))).toBe(true);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -27,18 +28,18 @@ test("screenshot carousel supports arrows, wraparound, and direct selection", as
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
   const status = carousel.getByRole("status");
-  await expect(status).toHaveText("Screenshot 1 of 4");
+  await expect(status).toHaveText("Screenshot 1 of 7");
   await expect(carousel.locator('[data-slide]:not([aria-hidden="true"]) img')).toHaveAttribute("src", "./assets/screenshots/inbox.png");
   await carousel.getByRole("button", { name: "Previous screenshot" }).click();
-  await expect(status).toHaveText("Screenshot 4 of 4");
-  await expect(carousel.getByRole("img")).toHaveAttribute("src", "./assets/screenshots/active.png");
+  await expect(status).toHaveText("Screenshot 7 of 7");
+  await expect(carousel.getByRole("img")).toHaveAttribute("src", "./assets/screenshots/notes.png");
   await carousel.getByRole("button", { name: "Next screenshot" }).click();
-  await expect(status).toHaveText("Screenshot 1 of 4");
+  await expect(status).toHaveText("Screenshot 1 of 7");
   await carousel.getByRole("button", { name: "Next screenshot" }).click();
-  await expect(status).toHaveText("Screenshot 2 of 4");
+  await expect(status).toHaveText("Screenshot 2 of 7");
   await expect(carousel.getByRole("img")).toHaveAttribute("src", "./assets/screenshots/estimate.png");
   await carousel.getByRole("button", { name: "Show screenshot 3: Review your plan" }).click();
-  await expect(status).toHaveText("Screenshot 3 of 4");
+  await expect(status).toHaveText("Screenshot 3 of 7");
   await expect(carousel.getByRole("img")).toHaveAttribute("src", "./assets/screenshots/review-plan.png");
   await expect(carousel.getByRole("img")).toBeInViewport();
   await expect(carousel.locator('[aria-current="true"]')).toHaveCount(1);
@@ -51,13 +52,13 @@ test("keyboard navigation and the complete how-to FAQ", async ({ page }) => {
   const status = carousel.getByRole("status");
   await carousel.focus();
   await carousel.press("ArrowRight");
-  await expect(status).toHaveText("Screenshot 2 of 4");
+  await expect(status).toHaveText("Screenshot 2 of 7");
   await carousel.press("ArrowLeft");
-  await expect(status).toHaveText("Screenshot 1 of 4");
+  await expect(status).toHaveText("Screenshot 1 of 7");
   await carousel.press("End");
-  await expect(status).toHaveText("Screenshot 4 of 4");
+  await expect(status).toHaveText("Screenshot 7 of 7");
   await carousel.press("Home");
-  await expect(status).toHaveText("Screenshot 1 of 4");
+  await expect(status).toHaveText("Screenshot 1 of 7");
   const faq = page.locator(".faq-list details").filter({ has: page.locator("summary", { hasText: "How to use" }) });
   await faq.locator("summary").focus();
   await faq.locator("summary").press("Enter");
@@ -98,9 +99,9 @@ test("mobile carousel supports horizontal touch swipes", async ({ page }, testIn
     await session.send("Input.dispatchTouchEvent", { type: "touchEnd", touchPoints: [] });
   };
   await swipe(from, to);
-  await expect(page.locator("[data-carousel-status]")).toHaveText("Screenshot 2 of 4");
+  await expect(page.locator("[data-carousel-status]")).toHaveText("Screenshot 2 of 7");
   await swipe(to, from);
-  await expect(page.locator("[data-carousel-status]")).toHaveText("Screenshot 1 of 4");
+  await expect(page.locator("[data-carousel-status]")).toHaveText("Screenshot 1 of 7");
   await session.detach();
 });
 test("downloads still work when GitHub metadata is unavailable", async ({ page }) => {
@@ -116,4 +117,82 @@ test("Cloudflare serves a styled custom 404 for nested paths", async ({ page }) 
   await expect(page.getByRole("heading", { name: "This page wandered off." })).toBeVisible();
   expect(await page.locator("img").evaluate((img) => img.complete && img.naturalWidth > 0)).toBe(true);
   await expect(page.getByRole("link", { name: "Back to the homepage" })).toHaveAttribute("href", "/");
+});
+
+test("Calendar and Notes sections show the new product screenshots", async ({ page }) => {
+  await page.goto("/");
+  const calendar = page.locator(".calendar-section");
+  await calendar.scrollIntoViewIfNeeded();
+  await expect(calendar.getByRole("heading")).toHaveText("Your plans,one day at a time.");
+  await expect(calendar.getByRole("img")).toHaveCount(2);
+  await expect(calendar.locator("img").nth(0)).toHaveAttribute("src", "./assets/screenshots/calendar-month.png");
+  await expect(calendar.locator("img").nth(1)).toHaveAttribute("src", "./assets/screenshots/calendar-day.png");
+  await expect.poll(() => calendar.locator("img").evaluateAll((images) => images.every((img) => img.complete && img.naturalWidth > 0))).toBe(true);
+  const notes = page.locator(".notes-section");
+  await notes.scrollIntoViewIfNeeded();
+  await expect(notes.getByRole("heading")).toHaveText("A little spacefor your thoughts.");
+  await expect(notes.getByRole("img")).toHaveAttribute("src", "./assets/screenshots/notes.png");
+  await expect.poll(() => notes.locator("img").evaluate((img) => img.complete && img.naturalWidth === 2718)).toBe(true);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("carousel advances automatically, wraps, and supports pause and play", async ({ page }) => {
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
+  const status = carousel.getByRole("status");
+  await carousel.scrollIntoViewIfNeeded();
+  await page.mouse.move(0, 0);
+  await expect(status).toHaveAttribute("aria-live", "off");
+  await page.clock.fastForward(5900);
+  await expect(status).toHaveText("Screenshot 1 of 7");
+  await page.clock.fastForward(101);
+  await expect(status).toHaveText("Screenshot 2 of 7");
+  await carousel.getByRole("button", { name: "Pause automatic screenshots" }).click();
+  await page.mouse.move(0, 0);
+  await page.clock.fastForward(18000);
+  await expect(status).toHaveText("Screenshot 2 of 7");
+  await expect(status).toHaveAttribute("aria-live", "polite");
+  await carousel.getByRole("button", { name: "Show screenshot 7: Notes" }).click();
+  await carousel.getByRole("button", { name: "Play automatic screenshots" }).click();
+  await page.mouse.move(0, 0);
+  await expect(status).toHaveAttribute("aria-live", "off");
+  await page.clock.fastForward(6100);
+  await expect(status).toHaveText("Screenshot 1 of 7");
+});
+
+test("carousel pauses during pointer and keyboard interaction", async ({ page }, testInfo) => {
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
+  const status = carousel.getByRole("status");
+  await carousel.scrollIntoViewIfNeeded();
+  if (testInfo.project.name !== "mobile") {
+    await carousel.hover();
+    await page.clock.fastForward(12000);
+    await expect(status).toHaveText("Screenshot 1 of 7");
+    await page.mouse.move(0, 0);
+    await expect(status).toHaveAttribute("aria-live", "off");
+    await page.clock.fastForward(6100);
+    await expect(status).toHaveText("Screenshot 2 of 7");
+  }
+  await carousel.focus();
+  const current = await status.textContent();
+  await page.clock.fastForward(12000);
+  await expect(status).toHaveText(current);
+  await expect(status).toHaveAttribute("aria-live", "polite");
+});
+
+test("reduced motion starts with autoplay paused and keeps manual controls working", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.clock.install();
+  await page.goto("/");
+  const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
+  const status = carousel.getByRole("status");
+  await carousel.scrollIntoViewIfNeeded();
+  await expect(carousel.getByRole("button", { name: "Play automatic screenshots" })).toBeVisible();
+  await page.clock.fastForward(18000);
+  await expect(status).toHaveText("Screenshot 1 of 7");
+  await carousel.getByRole("button", { name: "Next screenshot" }).click();
+  await expect(status).toHaveText("Screenshot 2 of 7");
 });
