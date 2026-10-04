@@ -137,11 +137,16 @@ test("Calendar and Notes sections show the new product screenshots", async ({ pa
 });
 
 test("carousel advances automatically, wraps, and supports pause and play", async ({ page }) => {
-  await page.clock.install();
+  await page.clock.install({ time: new Date("2026-10-04T00:00:00Z") });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
   const status = carousel.getByRole("status");
   await carousel.scrollIntoViewIfNeeded();
+  await carousel.getByRole("button", { name: "Pause automatic screenshots" }).click();
+  // Freeze time while paused, then start a fresh six-second interval.
+  await page.clock.pauseAt(new Date("2026-10-04T00:01:00Z"));
+  await carousel.press("Home");
+  await carousel.getByRole("button", { name: "Play automatic screenshots" }).click();
   await page.mouse.move(0, 0);
   await expect(status).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(5900);
