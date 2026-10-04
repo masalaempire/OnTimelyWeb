@@ -7,27 +7,21 @@
     const track = carousel.querySelector("[data-carousel-track]");
     const viewport = carousel.querySelector("[data-carousel-viewport]");
     const status = carousel.querySelector("[data-carousel-status]");
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const autoInterval = 4000;
+    const arrowPause = 10000;
     let current = 0;
-    let hovered = false;
-    let focusPaused = false;
-    let visible = true;
     let touchStart = null;
     let timer = null;
 
-    function updatePlayback() {
+    function scheduleNext(delay = autoInterval) {
       window.clearTimeout(timer);
-      timer = null;
-      const playing = !reducedMotion.matches && !hovered && !focusPaused && !touchStart && visible && !document.hidden;
-      // Automatic changes stay quiet; manual navigation announces the current slide.
-      status.setAttribute("aria-live", playing ? "off" : "polite");
-      if (playing) {
-        timer = window.setTimeout(() => showSlide(current + 1), 6000);
-      }
+      timer = window.setTimeout(() => showSlide(current + 1), delay);
     }
 
-    function showSlide(index) {
+    function showSlide(index, delay = autoInterval) {
       current = (index + slides.length) % slides.length;
+      // Automatic changes stay quiet; arrow navigation announces the selected slide.
+      status.setAttribute("aria-live", delay === arrowPause ? "polite" : "off");
       track.style.transform = `translateX(-${current * 100}%)`;
       slides.forEach((slide, i) => {
         slide.setAttribute("aria-hidden", String(i !== current));
@@ -38,44 +32,17 @@
         else dot.removeAttribute("aria-current");
       });
       status.textContent = `Screenshot ${current + 1} of ${slides.length}`;
-      updatePlayback();
+      scheduleNext(delay);
     }
 
-    carousel.querySelector("[data-carousel-previous]").addEventListener("click", () => showSlide(current - 1));
-    carousel.querySelector("[data-carousel-next]").addEventListener("click", () => showSlide(current + 1));
+    carousel.querySelector("[data-carousel-previous]").addEventListener("click", () => showSlide(current - 1, arrowPause));
+    carousel.querySelector("[data-carousel-next]").addEventListener("click", () => showSlide(current + 1, arrowPause));
     dots.forEach((dot) => dot.addEventListener("click", () => showSlide(Number(dot.dataset.slideTo))));
-    carousel.addEventListener("pointerenter", (event) => {
-      if (event.pointerType === "touch") return;
-      hovered = true;
-      updatePlayback();
-    });
-    carousel.addEventListener("pointerleave", (event) => {
-      if (event.pointerType === "touch") return;
-      hovered = false;
-      updatePlayback();
-    });
-    carousel.addEventListener("focusin", () => {
-      focusPaused = true;
-      updatePlayback();
-    });
-    carousel.addEventListener("focusout", (event) => {
-      if (carousel.contains(event.relatedTarget)) return;
-      focusPaused = false;
-      updatePlayback();
-    });
-    document.addEventListener("visibilitychange", updatePlayback);
-    reducedMotion.addEventListener("change", updatePlayback);
-    if ("IntersectionObserver" in window) {
-      new IntersectionObserver(([entry]) => {
-        visible = entry.isIntersecting;
-        updatePlayback();
-      }).observe(carousel);
-    }
     carousel.addEventListener("keydown", (event) => {
       const moves = { ArrowLeft: -1, ArrowRight: 1 };
       if (event.key in moves) {
         event.preventDefault();
-        showSlide(current + moves[event.key]);
+        showSlide(current + moves[event.key], arrowPause);
       } else if (event.key === "Home" || event.key === "End") {
         event.preventDefault();
         showSlide(event.key === "Home" ? 0 : slides.length - 1);
@@ -85,7 +52,6 @@
       if (event.pointerType !== "touch") return;
       touchStart = { x: event.clientX, y: event.clientY };
       viewport.setPointerCapture(event.pointerId);
-      updatePlayback();
     });
     viewport.addEventListener("pointerup", (event) => {
       if (!touchStart) return;
@@ -94,15 +60,11 @@
       touchStart = null;
       if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.5) {
         showSlide(current + (dx < 0 ? 1 : -1));
-      } else {
-        updatePlayback();
       }
     });
-    viewport.addEventListener("pointercancel", () => {
-      touchStart = null;
-      updatePlayback();
-    });
-    updatePlayback();
+    viewport.addEventListener("pointercancel", () => { touchStart = null; });
+    status.setAttribute("aria-live", "off");
+    scheduleNext();
   }
   // The stable release download works even if this optional metadata request fails.
   const controller = new AbortController();

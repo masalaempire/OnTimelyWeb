@@ -134,62 +134,51 @@ test("Calendar and Notes sections show the new product screenshots", async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test("carousel advances automatically and wraps without extra playback controls", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
+test("carousel advances every four seconds and wraps while focused or hovered", async ({ page }) => {
   await page.clock.install({ time: new Date("2026-10-04T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-10-04T00:01:00Z"));
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
   const status = carousel.getByRole("status");
-  await carousel.scrollIntoViewIfNeeded();
-  await page.clock.pauseAt(new Date("2026-10-04T00:01:00Z"));
-  await page.mouse.move(0, 0);
-  await page.emulateMedia({ reducedMotion: "no-preference" });
-  await expect(status).toHaveAttribute("aria-live", "off");
-  await page.clock.fastForward(5900);
+  await page.clock.runFor(3999);
   await expect(status).toHaveText("Screenshot 1 of 7");
-  await page.clock.fastForward(101);
+  await page.clock.runFor(1);
   await expect(status).toHaveText("Screenshot 2 of 7");
   await carousel.getByRole("button", { name: "Show screenshot 7: Notes" }).click();
-  await carousel.focus();
-  await carousel.evaluate((element) => element.blur());
-  await page.mouse.move(0, 0);
+  await page.clock.runFor(4000);
+  await expect(status).toHaveText("Screenshot 1 of 7");
   await expect(status).toHaveAttribute("aria-live", "off");
-  await page.clock.fastForward(6100);
-  await expect(status).toHaveText("Screenshot 1 of 7");
 });
 
-test("carousel pauses during pointer and keyboard interaction", async ({ page }, testInfo) => {
-  await page.clock.install();
+test("each arrow press pauses automatic movement for ten seconds before resuming", async ({ page }) => {
+  await page.clock.install({ time: new Date("2026-10-04T00:00:00Z") });
+  await page.clock.pauseAt(new Date("2026-10-04T00:01:00Z"));
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
   const status = carousel.getByRole("status");
-  await carousel.scrollIntoViewIfNeeded();
-  if (testInfo.project.name !== "mobile") {
-    await carousel.hover();
-    await page.clock.fastForward(12000);
-    await expect(status).toHaveText("Screenshot 1 of 7");
-    await page.mouse.move(0, 0);
-    await expect(status).toHaveAttribute("aria-live", "off");
-    await page.clock.fastForward(6100);
-    await expect(status).toHaveText("Screenshot 2 of 7");
-  }
-  await carousel.focus();
-  const current = await status.textContent();
-  await page.clock.fastForward(12000);
-  await expect(status).toHaveText(current);
-  await expect(status).toHaveAttribute("aria-live", "polite");
-});
-
-test("reduced motion starts with autoplay paused and keeps manual controls working", async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.clock.install();
-  await page.goto("/");
-  const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
-  const status = carousel.getByRole("status");
-  await carousel.scrollIntoViewIfNeeded();
-  await expect(status).toHaveAttribute("aria-live", "polite");
-  await page.clock.fastForward(18000);
-  await expect(status).toHaveText("Screenshot 1 of 7");
-  await carousel.getByRole("button", { name: "Next screenshot" }).click();
+  const next = carousel.getByRole("button", { name: "Next screenshot" });
+  await next.click();
   await expect(status).toHaveText("Screenshot 2 of 7");
+  await page.clock.runFor(9999);
+  await expect(status).toHaveText("Screenshot 2 of 7");
+  await next.click();
+  await expect(status).toHaveText("Screenshot 3 of 7");
+  await page.clock.runFor(9999);
+  await expect(status).toHaveText("Screenshot 3 of 7");
+  await page.clock.runFor(1);
+  await expect(status).toHaveText("Screenshot 4 of 7");
+  await page.clock.runFor(4000);
+  await expect(status).toHaveText("Screenshot 5 of 7");
+  await carousel.getByRole("button", { name: "Previous screenshot" }).click();
+  await expect(status).toHaveText("Screenshot 4 of 7");
+  await page.clock.runFor(9999);
+  await expect(status).toHaveText("Screenshot 4 of 7");
+  await page.clock.runFor(1);
+  await expect(status).toHaveText("Screenshot 5 of 7");
+  await carousel.press("ArrowLeft");
+  await expect(status).toHaveText("Screenshot 4 of 7");
+  await page.clock.runFor(9999);
+  await expect(status).toHaveText("Screenshot 4 of 7");
+  await page.clock.runFor(1);
+  await expect(status).toHaveText("Screenshot 5 of 7");
 });
