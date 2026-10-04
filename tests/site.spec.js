@@ -6,7 +6,7 @@ test.beforeEach(async ({ page }) => {
     tag_name: "v0.1.1", assets: [{ name: "OnTimely.dmg", browser_download_url: "https://github.com/masalaempire/OnTimely/releases/download/v0.1.1/OnTimely.dmg" }]
   } }));
 });
-test("download, logo, navigation, and responsive layout", async ({ page }, testInfo) => {
+test("download, logo, navigation, and responsive layout", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
@@ -21,8 +21,6 @@ test("download, logo, navigation, and responsive layout", async ({ page }, testI
   await page.getByRole("link", { name: "FAQ", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Good questions." })).toBeInViewport();
   expect(errors).toEqual([]);
-  await page.goto("/");
-  await page.screenshot({ path: testInfo.outputPath("homepage.png"), fullPage: true });
 });
 test("screenshot carousel supports arrows, wraparound, and direct selection", async ({ page }) => {
   await page.goto("/");
@@ -136,30 +134,24 @@ test("Calendar and Notes sections show the new product screenshots", async ({ pa
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
 
-test("carousel advances automatically, wraps, and supports pause and play", async ({ page }) => {
+test("carousel advances automatically and wraps without extra playback controls", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.clock.install({ time: new Date("2026-10-04T00:00:00Z") });
   await page.goto("/");
   const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
   const status = carousel.getByRole("status");
   await carousel.scrollIntoViewIfNeeded();
-  await carousel.getByRole("button", { name: "Pause automatic screenshots" }).click();
-  // Freeze time while paused, then start a fresh six-second interval.
   await page.clock.pauseAt(new Date("2026-10-04T00:01:00Z"));
-  await carousel.press("Home");
-  await carousel.getByRole("button", { name: "Play automatic screenshots" }).click();
   await page.mouse.move(0, 0);
+  await page.emulateMedia({ reducedMotion: "no-preference" });
   await expect(status).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(5900);
   await expect(status).toHaveText("Screenshot 1 of 7");
   await page.clock.fastForward(101);
   await expect(status).toHaveText("Screenshot 2 of 7");
-  await carousel.getByRole("button", { name: "Pause automatic screenshots" }).click();
-  await page.mouse.move(0, 0);
-  await page.clock.fastForward(18000);
-  await expect(status).toHaveText("Screenshot 2 of 7");
-  await expect(status).toHaveAttribute("aria-live", "polite");
   await carousel.getByRole("button", { name: "Show screenshot 7: Notes" }).click();
-  await carousel.getByRole("button", { name: "Play automatic screenshots" }).click();
+  await carousel.focus();
+  await carousel.evaluate((element) => element.blur());
   await page.mouse.move(0, 0);
   await expect(status).toHaveAttribute("aria-live", "off");
   await page.clock.fastForward(6100);
@@ -195,7 +187,7 @@ test("reduced motion starts with autoplay paused and keeps manual controls worki
   const carousel = page.getByRole("region", { name: "OnTimely screenshots" });
   const status = carousel.getByRole("status");
   await carousel.scrollIntoViewIfNeeded();
-  await expect(carousel.getByRole("button", { name: "Play automatic screenshots" })).toBeVisible();
+  await expect(status).toHaveAttribute("aria-live", "polite");
   await page.clock.fastForward(18000);
   await expect(status).toHaveText("Screenshot 1 of 7");
   await carousel.getByRole("button", { name: "Next screenshot" }).click();

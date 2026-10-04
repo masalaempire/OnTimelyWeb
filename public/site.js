@@ -7,10 +7,8 @@
     const track = carousel.querySelector("[data-carousel-track]");
     const viewport = carousel.querySelector("[data-carousel-viewport]");
     const status = carousel.querySelector("[data-carousel-status]");
-    const toggle = carousel.querySelector("[data-carousel-toggle]");
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
     let current = 0;
-    let paused = reducedMotion.matches;
     let hovered = false;
     let focusPaused = false;
     let visible = true;
@@ -20,9 +18,7 @@
     function updatePlayback() {
       window.clearTimeout(timer);
       timer = null;
-      toggle.textContent = paused ? "Play slideshow" : "Pause slideshow";
-      toggle.setAttribute("aria-label", paused ? "Play automatic screenshots" : "Pause automatic screenshots");
-      const playing = !paused && !hovered && !focusPaused && !touchStart && visible && !document.hidden;
+      const playing = !reducedMotion.matches && !hovered && !focusPaused && !touchStart && visible && !document.hidden;
       // Automatic changes stay quiet; manual navigation announces the current slide.
       status.setAttribute("aria-live", playing ? "off" : "polite");
       if (playing) {
@@ -48,11 +44,6 @@
     carousel.querySelector("[data-carousel-previous]").addEventListener("click", () => showSlide(current - 1));
     carousel.querySelector("[data-carousel-next]").addEventListener("click", () => showSlide(current + 1));
     dots.forEach((dot) => dot.addEventListener("click", () => showSlide(Number(dot.dataset.slideTo))));
-    toggle.addEventListener("click", () => {
-      paused = !paused;
-      focusPaused = false;
-      updatePlayback();
-    });
     carousel.addEventListener("pointerenter", (event) => {
       if (event.pointerType === "touch") return;
       hovered = true;
@@ -73,10 +64,7 @@
       updatePlayback();
     });
     document.addEventListener("visibilitychange", updatePlayback);
-    reducedMotion.addEventListener("change", () => {
-      if (reducedMotion.matches) paused = true;
-      updatePlayback();
-    });
+    reducedMotion.addEventListener("change", updatePlayback);
     if ("IntersectionObserver" in window) {
       new IntersectionObserver(([entry]) => {
         visible = entry.isIntersecting;
